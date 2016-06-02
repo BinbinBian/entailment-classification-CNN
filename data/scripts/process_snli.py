@@ -2,36 +2,14 @@ from sys import argv
 
 script, filename = argv
 
-print "We're going to erase %r." % filename
-print "If you don't want that, hit CTRL-C (^C)."
-print "If you do want that, hit RETURN."
-
-raw_input("?")
-
-print "Opening the file..."
 target = open(filename, 'r')
 
-# print "Truncating the file.  Goodbye!"
-# target.truncate()
-
+first = 1
 for line in target:
-	elements = line.split('\t')
-	print len(elements)
+	if first < 1:
+		elements = line.split('\t')
+		print("{0}\t{1}\t{2}".format(elements[5],elements[6],elements[0]))
+	else:
+		first = 0	
 
-print "Now I'm going to ask you for three lines."
-
-# line1 = raw_input("line 1: ")
-# line2 = raw_input("line 2: ")
-# line3 = raw_input("line 3: ")
-
-# print "I'm going to write these to the file."
-
-# target.write(line1)
-# target.write("\n")
-# target.write(line2)
-# target.write("\n")
-# target.write(line3)
-# target.write("\n")
-
-# print "And finally, we close it."
 target.close()
