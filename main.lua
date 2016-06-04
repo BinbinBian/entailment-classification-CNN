@@ -13,14 +13,14 @@ cmd:option('-data_dir', 'data', 'path of the train dataset')
 cmd:option('-batch_size', '16', 'number of batches')
 -- cmd:option('-max_epochs', 10, 'number of full passes through the training data')
 -- cmd:option('-cnn_size', 300, 'dimensionality of sentence embeddings')
--- cmd:option('-word_vec_size', 300, 'dimensionality of word embeddings')
+cmd:option('-word_vec_size', 300, 'dimensionality of word embeddings')
 -- cmd:option('-dropout',0.5,'dropout. 0 = no dropout')
 cmd:option('-seed',3435,'torch manual random number generator seed')
 cmd:option('-max_length', 15, 'max length allowed for each sentence')
 -- cmd:option('-print_every',500,'how many steps/minibatches between printing out the loss')
 -- cmd:option('-save_every', 25000, 'save epoch')
--- cmd:option('-checkpoint_dir', 'cv4', 'output directory where checkpoints get written')
--- cmd:option('-savefile','model','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
+cmd:option('-checkpoint_dir', 'cv4', 'output directory where checkpoints get written')
+cmd:option('-savefile','model','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
 -- cmd:option('-checkpoint', 'checkpoint.t7', 'start from a checkpoint if a valid checkpoint.t7 file is given')
 -- cmd:option('-learningRate', 0.001, 'learning rate')
 -- cmd:option('-beta1', 0.9, 'momentum parameter 1')
@@ -40,9 +40,30 @@ params = cmd:parse(arg)
 -- params.addTime('CNN SNLI','%F %T')
 torch.manualSeed(params.seed)
 
+-- load necessary packages depending on config options
+if params.gpuid >= 0 then
+   print('using CUDA on GPU ' .. params.gpuid .. '...')
+   require 'cutorch'
+   require 'cunn'
+   cutorch.setDevice(params.gpuid + 1)
+end
+if params.cudnn == 1 then
+  assert(params.gpuid >= 0, 'GPU must be used if using cudnn')
+  print('using cudnn...')
+  require 'cudnn'
+end
+
 -- create data loader
 loader = BatchLoader.create(params.data_dir, params.max_length,params.batch_size)
--- params.seq_length = loader.max_sentence_l 
--- params.vocab_size = #loader.idx2word
--- params.classes = 3  --fixed here
--- params.word2vec = loader.word2vec
+params.seq_length = loader.max_sentence_l 
+params.vocab_size = #loader.idx2word
+params.classes = 3  --fixed here
+params.word2vec = loader.word2vec
+
+-- print(loader)
+-- -- model
+-- protos = {}
+-- protos.enc = encoder.lstmn(opt.vocab_size, opt.rnn_size, opt.dropout, opt.word_vec_size, opt.batch_size, opt.word2vec)
+-- protos.dec = decoder.lstmn(opt.vocab_size, opt.rnn_size, opt.dropout, opt.word_vec_size, opt.batch_size, opt.word2vec)
+-- protos.criterion = nn.ClassNLLCriterion()
+-- protos.classifier = classifier_simple.classifier(opt.rnn_size, opt.dropout, opt.classes)
