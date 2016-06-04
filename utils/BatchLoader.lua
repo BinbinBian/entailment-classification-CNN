@@ -6,28 +6,11 @@ function BatchLoader.create(data_dir, max_sentence_l , batch_size)
     local self = {}
     setmetatable(self, BatchLoader)
 
-    local train_file = path.join(data_dir, 'snli_1.0_train.txt')
-    local valid_file = path.join(data_dir, 'snli_1.0_dev.txt')
-    local test_file = path.join(data_dir, 'snli_1.0_test.txt')
+    local train_file = path.join(data_dir, 'train.txt')
+    local valid_file = path.join(data_dir, 'dev.txt')
+    local test_file = path.join(data_dir, 'test.txt')
     local input_files = {train_file, valid_file, test_file}
     local input_w2v = path.join(data_dir, 'word2vec.txt')
-
-    -- local split_counts = {}
-
-    --  -- also counts the number of sentences
-    -- for  split = 1,3 do -- split = 1 (train), 2 (val), or 3 (test)
-    --     f = io.open(input_files[split], 'r')       
-    --     local scounts = -1
-    --     for line in f:lines() do
-    --         scounts = scounts + 1
-    --     end
-    --     f:close()
-    --     split_counts[split] = scounts  --the number of sentences in each split
-    -- end
-
-    -- print(string.format('Token count: train %d, val %d, test %d', 
-    --          split_counts[1], split_counts[2], split_counts[3]))
-
 
     -- construct a tensor with all the data
     local s1, s2, label, idx2word, word2idx, word2vec = BatchLoader.text_to_tensor(input_files, max_sentence_l, input_w2v)
@@ -38,7 +21,7 @@ function BatchLoader.create(data_dir, max_sentence_l , batch_size)
     self.split_sizes = {}
     self.all_batches = {}
  
-    -- print(string.format('Word vocab size: %d', #self.idx2word))
+    print(string.format('Word vocab size: %d', #self.idx2word))
     -- cut off the end for train/valid sets so that it divides evenly
     for split=1,3 do
        local s1data = s1[split]
@@ -50,7 +33,13 @@ function BatchLoader.create(data_dir, max_sentence_l , batch_size)
           s2data = s2data:sub(1, batch_size * math.floor(len / batch_size))
           label_data = label_data:sub(1, batch_size * math.floor(len / batch_size))   --let's just make the batch_size a multiplier of the test data size
        end
-
+       print(batch_size)
+       print("---------------")
+       print(label_data)
+       print(">>>>>>>>>>>>>>>>")
+       print(s1data)
+       print("+++++++++++++++")
+       print(s1[split])
        s1_batches = s1data:split(batch_size,1)
        s2_batches = s2data:split(batch_size,1)
        label_batches = label_data:split(batch_size,1)
@@ -63,6 +52,19 @@ function BatchLoader.create(data_dir, max_sentence_l , batch_size)
     print(string.format('data load done. Number of batches in train: %d, val: %d, test: %d', self.split_sizes[1], self.split_sizes[2], self.split_sizes[3]))
     collectgarbage()
     return self
+end
+
+function BatchLoader:to_number(lbl)
+  local idx = 0
+  lbl = lbl or ''
+  if lbl=="neutral" then
+    idx = 1
+  elseif lbl=="entailment" then
+    idx = 2
+  elseif lbl=="contradiction" then
+    idx = 3
+  end
+  return idx
 end
 
 function BatchLoader:reset_batch_pointer(split_idx, batch_idx)
@@ -115,39 +117,39 @@ function BatchLoader.text_to_tensor(input_files, max_sentence_l, input_w2v)
        -- process each file in split
        f = io.open(input_files[split], 'r')
        local sentence_num = 0
-       local skip_first = 0
        for line in f:lines() do
-          if skip_first ~= 0 then
-            sentence_num = sentence_num + 1
-            local triplet = stringx.split(line, '\t')
-            print(triplet)
-            local label, s1, s2 = triplet[1], triplet[2], triplet[3]
-            labels[split][sentence_num] = tonumber(label) + 1
-            -- append tokens in the sentence1
-            output_tensors1[split][sentence_num][1] = 1
-            local word_num = 1
-            for rword in s1:gmatch'([^%s]+)' do
-               word_num = word_num + 1
-               if word2idx[rword]==nil then
-                  idx2word[#idx2word + 1] = rword 
-                  word2idx[rword] = #idx2word
-               end
-               output_tensors1[split][sentence_num][word_num] = word2idx[rword]
-               if word_num == max_sentence_l then break end
-            end
-            -- append tokens in the sentence1
-            output_tensors1[split][sentence_num][1] = 1
-            word_num = 1
-            for rword in s2:gmatch'([^%s]+)' do
-               word_num = word_num + 1
-               if word2idx[rword]==nil then
-                  idx2word[#idx2word + 1] = rword 
-                  word2idx[rword] = #idx2word
-               end
-               output_tensors2[split][sentence_num][word_num] = word2idx[rword]
-               if word_num == max_sentence_l then break end
-            end
-            skip_first = skip_first + 1
+          sentence_num = sentence_num + 1
+          local triplet = stringx.split(line, '\t')
+          -- print(triplet)
+          local s1, s2, label = triplet[1], triplet[2], triplet[3]
+          -- print(label)
+          -- oink = BatchLoader.to_number(label)
+          -- print(oink)
+          labels[split][sentence_num] = BatchLoader:to_number(label)
+          -- append tokens in the sentence1
+          output_tensors1[split][sentence_num][1] = 1
+          local word_num = 1
+          for rword in s1:gmatch'([^%s]+)' do
+             
+             if word2idx[rword]==nil then
+                idx2word[#idx2word + 1] = rword 
+                word2idx[rword] = #idx2word
+             end
+             output_tensors1[split][sentence_num][word_num] = word2idx[rword]
+             if word_num == max_sentence_l then break end
+             word_num = word_num + 1
+          end
+          -- append tokens in the sentence1
+          -- output_tensors1[split][sentence_num][1] = 1
+          word_num = 1
+          for rword in s2:gmatch'([^%s]+)' do
+             word_num = word_num + 1
+             if word2idx[rword]==nil then
+                idx2word[#idx2word + 1] = rword 
+                word2idx[rword] = #idx2word
+             end
+             output_tensors2[split][sentence_num][word_num] = word2idx[rword]
+             if word_num == max_sentence_l then break end
           end
        end
     end
