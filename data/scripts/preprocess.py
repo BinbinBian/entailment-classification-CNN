@@ -5,29 +5,52 @@ import sys
 import operator
 import argparse
 
+def load_glove_vec(fname, vocab):
+  """
+  Loads 300x1 word vecs from Stanford (Socher) GloVe
+  """
+  word_vecs = {}
+  target = open(fname, "r")
+
+  word_vecs = {}
+  for item in target:
+    elements = item.split()
+    word = elements[0]
+    if word in vocab:
+      word_vecs[word] = np.asarray(elements[1:], dtype='float32')
+
+  target.close()
+  return word_vecs
+
 def load_bin_vec(fname, vocab):
-    """
-    Loads 300x1 word vecs from Google (Mikolov) word2vec
-    """
-    word_vecs = {}
-    with open(fname, "rb") as f:
-        header = f.readline()
-        vocab_size, layer1_size = map(int, header.split())
-        binary_len = np.dtype('float32').itemsize * layer1_size
-        for line in xrange(vocab_size):
-            word = []
-            while True:
-                ch = f.read(1)
-                if ch == ' ':
-                    word = ''.join(word)
-                    break
-                if ch != '\n':
-                    word.append(ch)   
-            if word in vocab:
-               word_vecs[word] = np.fromstring(f.read(binary_len), dtype='float32')  
-            else:
-                f.read(binary_len)
-    return word_vecs
+  """
+  Loads 300x1 word vecs from Google (Mikolov) word2vec
+  """
+  word_vecs = {}
+  a = 1
+  with open(fname, "rb") as f:
+      header = f.readline()
+      vocab_size, layer1_size = map(int, header.split())
+      binary_len = np.dtype('float32').itemsize * layer1_size
+      for line in xrange(vocab_size):
+        # if a < 5:
+          # a += 1
+          word = []
+          while True:
+              ch = f.read(1)
+              if ch == ' ':
+                  word = ''.join(word)
+                  break
+              if ch != '\n':
+                  word.append(ch)
+          # print word
+          if word in vocab:
+             word_vecs[word] = np.fromstring(f.read(binary_len), dtype='float32')
+             # print(binary_len)
+             # f.read(binary_len)
+          else:
+              f.read(binary_len)
+  return word_vecs
 
 def line_to_words(line, dataset):
   if dataset == 'SST1' or dataset == 'SST2':
@@ -164,7 +187,8 @@ def main():
       description =__doc__,
       formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument('dataset', help="Data set", type=str)
-  parser.add_argument('w2v', help="word2vec file", type=str)
+  parser.add_argument('embedding', help="Data set", type=str)
+  parser.add_argument('w2v', help="word2vec file", type=str) # note this is either w2v or glove ...
   parser.add_argument('--train', help="custom train data", type=str, default="")
   parser.add_argument('--test', help="custom test data", type=str, default="")
   parser.add_argument('--dev', help="custom dev data", type=str, default="")
@@ -172,6 +196,8 @@ def main():
   parser.add_argument('--custom_name', help="name of custom output hdf5 file", type=str, default="custom")
   args = parser.parse_args()
   dataset = args.dataset
+  embedding = args.embedding
+
   if dataset == 'custom':
     dataset = args.custom_name
 
@@ -192,7 +218,11 @@ def main():
       embeddings_f.write("%s %d\n" % (word, idx))
 
   # Load word2vec
-  w2v = load_bin_vec(args.w2v, word_to_idx)
+  if embedding == 'w2v':
+    w2v = load_bin_vec(args.w2v, word_to_idx)
+  elif embedding == 'glove':
+    w2v = load_glove_vec(args.w2v, word_to_idx)
+    # w2v = load_bin_vec(args.w2v, word_to_idx)
   V = len(word_to_idx) + 1
   print 'Vocab size:', V
 
