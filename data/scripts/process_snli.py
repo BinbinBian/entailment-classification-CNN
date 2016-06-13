@@ -4,6 +4,7 @@ script, filename, model = argv
 
 target = open(filename, 'r')
 
+model = int(model)
 idx = -1
 # skip the first row
 first = 1
