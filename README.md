@@ -8,11 +8,11 @@ Instructions to run:
 Assuming you have downloaded the SNLI dataset from its dedicated web page.
 
 cd data/scripts
-1. run: python process_snli.py /path-to-file/file.txt model
 
 Where model = 1 will process a premise-hypothesis
 	     21 will process premise
 	     22 will process hypothesis
- 
+
+1. run: python process_snli.py /path-to-file/file.txt model 
 2. word2vec/GloVe: run either of the scripts to prepare either
 3. run (assuming you have chosen word2vec in step 2): th main.lua -data snli-w2v.hdf5 -cudnn 1 >> thedate.log
